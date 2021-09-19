@@ -1,5 +1,17 @@
 // res = ""; for(let child of document.querySelectorAll("tbody")[1].children) {let cs = Array.from(child.children).map(x => x.innerText);res += `{name: "${cs[0]}", color: "${cs[2]}", categories: \{${cs[4].split("\n").map(x=>"\""+x.split(")")[0]+")\":"+x.split(")")[1])}\}},`; }console.log(res)
 // for (let x of [...document.body.innerText.matchAll(/材料：.+/g)].map(x => x[0].replace(/×\d+/g,"").replace("材料：","").replace(/、/g,"\",\""))) console.log("\""+x+"\"")
+// 敵を倒さないので以下の制約あり
+// - ドンケルシュテルン・邪な核石・竜核・プニの体液・虹プニの体液 は敵を倒せないので得られない
+// - 万能厄除け香 を得るのは封印された寺院に行く必要があるので排除
+// - 夕闇の雫・深紅の石・天界の大掃除・アンブロシアの花冠・ヴェルべディス・エレメントガードも排除
+
+// 意味があるのは17種類
+let categories = [
+  '(中和剤)', '(燃料)', '(毒の材料)', '(薬の材料)', '(食材)', '(水)',
+  '(神秘の力)', '(火薬)', '(紙)', '(金属)', '(粘土)', '(エリキシル)',
+  '(糸素材)', '(木材)', '(布)', '(宝石)', '(魔法の道具)', '(動物素材)',
+]
+
 let items = [
   // 素材
   { name: "魔法の草", color: "緑", categories: { "(植物類)": 10, "(薬の材料)": 10 } },
@@ -121,19 +133,19 @@ let items = [
   { name: "シルヴァリア", color: "赤", categories: { "(武器素材)": 30, "(金属)": 20 }, srcs: ["クプルフ鉱", "ソウルストン", "(鉱石)", "(燃料)"] },
   { name: "ルビリウム", color: "赤", categories: { "(武器素材)": 35, "(金属)": 25 }, srcs: ["くすぶる鍛石", "黒の燃球", "(鉱石)", "(燃料)"] },
   { name: "ゴルトアイゼン", color: "赤", categories: { "(武器素材)": 40, "(金属)": 30 }, srcs: ["ガイストアイゼン", "砕けた石材", "(鉱石)", "(燃料)"] },
-  { name: "ハルモニウム", color: "赤", categories: { "(武器素材)": 45, "(金属)": 35 }, srcs: ["深紅の石", "精霊結晶", "(鉱石)", "(燃料)"] },
+  // { name: "ハルモニウム", color: "赤", categories: { "(武器素材)": 45, "(金属)": 35 }, srcs: ["深紅の石", "精霊結晶", "(鉱石)", "(燃料)"] },
   { name: "クロース", color: "黄", categories: { "(防具素材)": 20, "(布)": 20 }, srcs: ["(糸素材)", "(植物類)", "(動物素材)"] },
   { name: "モフコット", color: "黄", categories: { "(防具素材)": 25, "(布)": 25 }, srcs: ["峰綿花", "(植物類)", "(糸素材)", "(動物素材)"] },
   { name: "アダールクロス", color: "黄", categories: { "(防具素材)": 30, "(布)": 30 }, srcs: ["粘銀の糸", "ケモノの毛皮", "(植物類)", "(水)"] },
   { name: "フリューゲル", color: "黄", categories: { "(防具素材)": 35, "(布)": 35 }, srcs: ["ファーデンライト", "(糸素材)", "(動物素材)", "(水)"] },
   { name: "フェアハイト", color: "黄", categories: { "(防具素材)": 40, "(布)": 40 }, srcs: ["束ねた金糸", "ピュアウォーター", "(糸素材)", "(神秘の力)"] },
-  { name: "ヴェルベティス", color: "黄", categories: { "(防具素材)": 45, "(布)": 45 }, srcs: ["粘金の鋼糸", "虹プニの体液", "(植物類)", "(エリキシル)"] },
+  // { name: "ヴェルベティス", color: "黄", categories: { "(防具素材)": 45, "(布)": 45 }, srcs: ["粘金の鋼糸", "虹プニの体液", "(植物類)", "(エリキシル)"] },
   { name: "雪花水晶", color: "青", subcolor: "緑", categories: { "(金属)": 30, "(宝石)": 20 }, srcs: ["銀霊結晶", "(水)", "(神秘の力)"] },
   { name: "ノーブルサファイア", color: "青", categories: { "(宝石)": 40 }, srcs: ["蒼剛石", "錬金粘土", "(鉱石)", "(水)"] },
-  { name: "夕闇の雫", color: "赤", categories: { "(毒の材料)": 40, "(水)": 40, "(燃料)": 40, "(鉱石)": 40 }, srcs: ["妖しい液体", "妖精の毒草", "(水)", "(中和剤)"] },
+  // { name: "夕闇の雫", color: "赤", categories: { "(毒の材料)": 40, "(水)": 40, "(燃料)": 40, "(鉱石)": 40 }, srcs: ["妖しい液体", "妖精の毒草", "(水)", "(中和剤)"] },
   { name: "先見の水晶玉", color: "黄", categories: { "(宝石)": 25, "(神秘の力)": 10 }, srcs: ["ペンデローク", "水晶のかけら", "(布)", "(粘土)"] },
-  { name: "深紅の石", color: "赤", subcolor: "白", categories: { "(動物素材)": 35, "(火薬)": 35, "(エリキシル)": 35, "(中和剤)": 35 }, srcs: ["竜の血晶", "星の粉", "(火薬)", "(エリキシル)"] },
-  { name: "賢者の石", color: "白", categories: { "(金属)": 99, "(薬の材料)": 99, "(エリキシル)": 99, "(神秘の力)": 99 }, srcs: ["深紅の石", "失敗作の灰", "(エリキシル)", "(宝石)"] },
+  // { name: "深紅の石", color: "赤", subcolor: "白", categories: { "(動物素材)": 35, "(火薬)": 35, "(エリキシル)": 35, "(中和剤)": 35 }, srcs: ["竜の血晶", "星の粉", "(火薬)", "(エリキシル)"] },
+  // { name: "賢者の石", color: "白", categories: { "(金属)": 99, "(薬の材料)": 99, "(エリキシル)": 99, "(神秘の力)": 99 }, srcs: ["深紅の石", "失敗作の灰", "(エリキシル)", "(宝石)"] },
   { name: "ミネラルエキス", color: "緑", categories: { "(薬の材料)": 20, "(水)": 10, "(金属)": 5 }, srcs: ["アプコール", "(鉱石)", "(中和剤)"] },
   { name: "緑を育む活性土", color: "黄", categories: { "(粘土)": 20 }, srcs: ["万薬のもと", "(木材)", "(鉱石)"] },
   { name: "精密な部品", color: "白", categories: { "(金属)": 40 }, srcs: ["シュタルメタル", "(鉱石)", "(燃料)", "(神秘の力)"] },
@@ -150,11 +162,11 @@ let items = [
   { name: "シュタルレヘルン", color: "青", categories: { "(爆弾)": 25 }, srcs: ["レヘルン", "雪花水晶", "(水)", "(中和剤)"] },
   { name: "ドナークリスタル", color: "緑", categories: { "(爆弾)": 25 }, srcs: ["ドナーストーン", "ブリッツライト", "(宝石)", "(金属)"] },
   { name: "プニプニ弾", color: "青", categories: { "(爆弾)": 20 }, srcs: ["シュタルメタル", "プニプニ玉", "(火薬)", "(中和剤)"] },
-  { name: "神の落し物", color: "黄", categories: { "(爆弾)": 15, "(魔法の道具)": 10 }, srcs: ["ノーブルサファイア", "邪な核石", "(爆弾)", "(金属)"] },
-  { name: "原初の種火", color: "白", categories: { "(爆弾)": 30, "(魔法の道具)": 25 }, srcs: ["深紅の石", "星の粉", "(爆弾)", "(神秘の力)"] },
+  // { name: "神の落し物", color: "黄", categories: { "(爆弾)": 15, "(魔法の道具)": 10 }, srcs: ["ノーブルサファイア", "邪な核石", "(爆弾)", "(金属)"] },
+  // { name: "原初の種火", color: "白", categories: { "(爆弾)": 30, "(魔法の道具)": 25 }, srcs: ["深紅の石", "星の粉", "(爆弾)", "(神秘の力)"] },
   { name: "魔法使いの笛", color: "緑", categories: { "(魔法の道具)": 30 }, srcs: ["スプルース", "天使のささやき", "(動物素材)", "(糸素材)"] },
-  { name: "天界の大掃除", color: "黄", categories: { "(爆弾)": 30, "(魔法の道具)": 20 }, srcs: ["ノーブルサファイア", "竜核", "(爆弾)", "(金属)"] },
-  { name: "終末の種火", color: "白", categories: { "(爆弾)": 40, "(魔法の道具)": 30 }, srcs: ["深紅の石", "太陽の粉", "(爆弾)", "(神秘の力)"] },
+  // { name: "天界の大掃除", color: "黄", categories: { "(爆弾)": 30, "(魔法の道具)": 20 }, srcs: ["ノーブルサファイア", "竜核", "(爆弾)", "(金属)"] },
+  // { name: "終末の種火", color: "白", categories: { "(爆弾)": 40, "(魔法の道具)": 30 }, srcs: ["深紅の石", "太陽の粉", "(爆弾)", "(神秘の力)"] },
   { name: "死霊使いの笛", color: "緑", categories: { "(魔法の道具)": 35 }, srcs: ["スプルース", "小悪魔のいたずら", "(動物素材)", "(糸素材)"] },
   { name: "不幸の瓶詰め", color: "赤", categories: { "(薬品)": 20 }, srcs: ["妖しい液体", "ペンデローク", "(動物素材)", "(水)"] },
   { name: "万物の写本", color: "白", categories: { "(魔法の道具)": 30, "(紙)": 10 }, srcs: ["ゼッテル", "ペンデローク", "(糸素材)", "(神秘の力)"] },
@@ -177,7 +189,7 @@ let items = [
   { name: "最高級ホットミルク", color: "青", categories: { "(食品)": 25 }, srcs: ["キルヘンミルク", "(燃料)", "(薬の材料)"] },
   { name: "ハニーシロップ", color: "青", categories: { "(薬品)": 30 }, srcs: ["ハチミツ", "(薬品)", "(水)"] },
   { name: "天使のささやき", color: "白", categories: { "(魔法の道具)": 20 }, srcs: ["聖水", "ペンデローク", "(金属)", "(粘土)"] },
-  { name: "万能厄除け香", color: "緑", categories: { "(薬品)": 10 }, srcs: ["万薬のもと", "(植物類)", "(紙)", "(燃料)"] },
+  // { name: "万能厄除け香", color: "緑", categories: { "(薬品)": 10 }, srcs: ["万薬のもと", "(植物類)", "(紙)", "(燃料)"] },
   { name: "精霊織りの帳", color: "青", categories: { "(布)": 15 }, srcs: ["粘銀の糸", "(布)", "(糸素材)", "(神秘の力)"] },
   { name: "火竜の気付け薬", color: "赤", categories: { "(薬品)": 25 }, srcs: ["竜の血晶", "(火薬)", "(水)"] },
   { name: "英雄降ろしの丸薬", color: "赤", categories: { "(薬品)": 25 }, srcs: ["竜のウロコ", "(エリキシル)", "(食材)", "(中和剤)"] },
@@ -196,48 +208,76 @@ let items = [
   { name: "魔除けの護符", color: "黄", categories: { "(魔法の道具)": 20, "(紙)": 15 }, srcs: ["敬虔な信者用お札", "聖水", "(布)", "(神秘の力)"] },
   { name: "ハートペンダント", color: "白", categories: { "(金属)": 25 }, srcs: ["蒼剛石", "(金属)", "(宝石)"] },
 ]
-let excludes = [
-  // { name: "朧草の花弁", color: "緑", categories: { "(重要)": 30 } },
-  // { name: "久遠の竜鱗", color: "赤", categories: { "(重要)": 30 } },
-  // { name: "魂結いの石", color: "白", categories: { "(重要)": 10 } },
-  // { name: "うるおい草", color: "白", categories: { "(重要)": 50 } },
-  // { name: "幽世の羅針盤", color: "白", categories: { "(重要)": 20 } },
-  // { name: "魂盟の針", color: "白", categories: { "(重要)": 15 } },
-  // { name: "真理の鍵", color: "白", categories: { "(重要)": 50 } },
-  // { name: "試作型栄養剤", color: "白", categories: { "(重要)": 30 } },
-  // { name: "聡者の標", color: "白", categories: { "(重要)": 50 } },
-  // { name: "アトリエテント", color: "白", categories: { "(重要)": 50 } },
-]
-
-let nameTable = {}
-let now = 0
-let nodes = []
-function find(name) {
-  if (!nameTable[name]) {
-    now++;
-    nameTable[name] = "node" + now
-    nodes.push(`${nameTable[name]} [label="${name}"];`)
-  }
-  return nameTable[name]
-}
-
-let edges = [] // `LR_0 -> LR_2[label = "SS(B)"]; `
+let itemsMap = {}
 for (let item of items) {
-  let name = item.name;
-  for (let cat in item.categories) {
-    edges.push(`${find(name)} -> ${find(cat)}; `)
+  itemsMap[item.name] = item
+}
+function createItemMap() {
+  let nodes = []
+  let nameTable = {}
+  let now = 0
+  function find(name) {
+    if (!nameTable[name]) {
+      now++;
+      nameTable[name] = "node" + now
+      nodes.push(`${nameTable[name]} [label="${name}"];`)
+    }
+    return nameTable[name]
   }
-  if (item.srcs) {
+  function nameMap(name) {
+    // let ingots = ["シュタルメタル", "シルヴァリア", "ルビリウム", "ゴルトアイゼン"]
+    // if (ingots.some(x => x === name)) return ""
+    // if (name === "インゴット") return name + "\n" + ingots.join("\n")
+    return name
+  }
+  let edges = [] // `LR_0 -> LR_2[label = "SS(B)"]; `
+  for (let item of items) {
+    let name = item.name;
+    name = nameMap(name)
+    if (!name) continue
+    // 素材は書かなくても図を見ればわかる
+    if (!item.srcs) continue
+    let outCount = 0
+    for (let cat in item.categories) {
+      if (cat === "(武器素材)") continue
+      if (cat === "(防具素材)") continue
+      if (cat === "(お菓子)") continue
+      if (cat === "(食品)") continue
+      if (cat === "(爆弾)") continue // 深紅の石が作れないため
+      if (cat === "(薬品)") continue // ハニーシロップループしかできないため
+      // 全ての素材は失敗作の灰にできる...がそれは自明なので除外(強制品質 0)
+      // 英雄降ろしが薬品->ハニーシロップループなのでクリアドロップ一意(=魔法の道具)
+      // 火薬は中和剤赤は中和剤として使うしかない
+      // if (cat === "(食材)") cat = "クリアドロップ"
+      // if (cat === "(火薬)") cat = "中和剤・赤"
+      // if (cat === "(魔法の道具)") cat = "マナフェザー"
+      // if (cat === "(薬の材料)") cat = "万薬のもと"
+      edges.push(`${find(name)} -> ${find(cat)}; `)
+      outCount++
+    }
+    // 終点
+    if (outCount === 0) continue
     for (let src of item.srcs) {
+      if (itemsMap[src] && !itemsMap[src].src) {
+        // 素材なら別に書く必要なし
+        continue
+      }
+      if (src === "(鉱石)") continue // 作れない...
+      if (src === "(植物類)") continue // 作れない...
+      // if (src === "(食材)") src = "クリアドロップ"
+      // if (src === "(火薬)") src = "中和剤・赤"
+      // if (src === "(魔法の道具)") src = "マナフェザー"
+      // if (src === "(薬の材料)") src = "万薬のもと"
       edges.push(`${find(src)} -> ${find(name)}; `)
     }
   }
-}
 
-let text = `
-digraph {
-  node[shape = box, style = rounded];
-  ${nodes.join("\n")}
-  ${edges.join("\n")}
-} `
-console.log(text)
+  let text = `
+  digraph {
+    node[shape = box, style = rounded];
+    ${nodes.join("\n")}
+    ${edges.join("\n")}
+  } `
+  console.log(text)
+}
+createItemMap()
