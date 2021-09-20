@@ -206,7 +206,29 @@ let items = [
   { name: "魔除けの護符", color: "黄", categories: { "(魔法の道具)": 20, "(紙)": 15 }, srcs: ["敬虔な信者用お札", "聖水", "(布)", "(神秘の力)"] },
   { name: "ハートペンダント", color: "白", categories: { "(金属)": 25 }, srcs: ["蒼剛石", "(金属)", "(宝石)"] },
 ]
-function createEdgeMap(items) {
+function shuffle([...array], seed = 88675123) {
+  class Random {
+    constructor(seed) {
+      this.x = 123456789;
+      this.y = 362436069;
+      this.z = 521288629;
+      this.w = seed;
+    }
+    next(max) {
+      let t = this.x ^ (this.x << 11);
+      this.x = this.y; this.y = this.z; this.z = this.w;
+      this.w = (this.w ^ (this.w >>> 19)) ^ (t ^ (t >>> 8));
+      return Math.abs(this.w) % (max + 1);
+    }
+  }
+  const random = new Random(seed)
+  for (let i = array.length - 1; i >= 0; i--) {
+    const j = random.next(i);
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+function createEdgeMap(items, concate = true) {
   let itemsMap = {}
   for (let item of items) {
     itemsMap[item.name] = item
@@ -234,14 +256,16 @@ function createEdgeMap(items) {
       if (cat === "(食品)") continue
       if (cat === "(爆弾)") continue // 深紅の石が作れないため
       if (cat === "(薬品)") continue // ハニーシロップループしかできないため
-      // 全ての素材は失敗作の灰にできる...がそれは自明なので除外(強制品質 0)
-      // 英雄降ろしが薬品->ハニーシロップループなのでクリアドロップ一意(=魔法の道具)
-      // 火薬は中和剤赤は中和剤として使うしかない
-      if (cat === "(食材)") cat = "(魔法の道具)" // クリアドロップ
-      if (cat === "(火薬)") cat = "(中和剤)" // 中和剤・赤
-      if (cat === "(薬の材料)") cat = "(魔法の道具)" // 万薬のもと -> 小悪魔のいたずら
-      if (cat === "(毒の材料)") cat = "(魔法の道具)" // 万薬のもと -> 小悪魔のいたずら
-      if (cat === "(魔法の道具)") cat = "(動物素材)" // マナフェザー
+      if (concate) {
+        // 全ての素材は失敗作の灰にできる...がそれは自明なので除外(強制品質 0)
+        // 英雄降ろしが薬品->ハニーシロップループなのでクリアドロップ一意(=魔法の道具)
+        // 火薬は中和剤赤は中和剤として使うしかない
+        if (cat === "(食材)") cat = "(魔法の道具)" // クリアドロップ
+        if (cat === "(火薬)") cat = "(中和剤)" // 中和剤・赤
+        if (cat === "(薬の材料)") cat = "(魔法の道具)" // 万薬のもと -> 小悪魔のいたずら
+        if (cat === "(毒の材料)") cat = "(魔法の道具)" // 万薬のもと -> 小悪魔のいたずら
+        if (cat === "(魔法の道具)") cat = "(動物素材)" // マナフェザー
+      }
       dsts.push(cat)
       outCount++
     }
@@ -255,11 +279,13 @@ function createEdgeMap(items) {
       }
       if (src === "(鉱石)") continue // 作れない...
       if (src === "(植物類)") continue // 作れない...
-      if (src === "(食材)") src = "(魔法の道具)" // クリアドロップ
-      if (src === "(火薬)") src = "(中和剤)" // 中和剤・赤
-      if (src === "(薬の材料)") src = "(魔法の道具)" // 万薬のもと -> 小悪魔のいたずら
-      if (src === "(毒の材料)") src = "(魔法の道具)" // 万薬のもと -> 小悪魔のいたずら
-      if (src === "(魔法の道具)") src = "(動物素材)" // マナフェザー
+      if (concate) {
+        if (src === "(食材)") src = "(魔法の道具)" // クリアドロップ
+        if (src === "(火薬)") src = "(中和剤)" // 中和剤・赤
+        if (src === "(薬の材料)") src = "(魔法の道具)" // 万薬のもと -> 小悪魔のいたずら
+        if (src === "(毒の材料)") src = "(魔法の道具)" // 万薬のもと -> 小悪魔のいたずら
+        if (src === "(魔法の道具)") src = "(動物素材)" // マナフェザー
+      }
       srcs.push(src)
     }
     for (let src of srcs) {
@@ -270,9 +296,31 @@ function createEdgeMap(items) {
       }
     }
   }
+  for (let src in edgeMap) {
+    for (let dst in edgeMap[src]) {
+      edgeMap[src][dst] = Array.from(edgeMap[src][dst])
+    }
+  }
   return edgeMap;
 }
-function edgeMapToDot(edgeMap) {
+function getRankMap(edgeMap, ...theSrcs) {
+  // from: src->dst->list
+  //   to: node->rank
+  let rankMap = {}
+  function dfs(src, rank) {
+    for (let dst in edgeMap[src]) {
+      if (rankMap[dst] !== undefined && rankMap[dst] <= rank) continue
+      rankMap[dst] = rank
+      dfs(dst, rank + 1)
+    }
+  }
+  for (let theSrc of theSrcs) {
+    rankMap[theSrc] = 0
+    dfs(theSrc, 1)
+  }
+  return rankMap
+}
+function edgeMapToDot(edgeMap, rankMap = null) {
   let nodes = []
   let nameTable = {}
   let now = 0
@@ -280,51 +328,46 @@ function edgeMapToDot(edgeMap) {
     if (!nameTable[name]) {
       now++;
       nameTable[name] = "node" + now
-      nodes.push(`${nameTable[name]} [label="${name}"];`)
+      nodes.push(name)
     }
     return nameTable[name]
   }
   let edges = []
   for (let src in edgeMap) {
     for (let dst in edgeMap[src]) {
-      edges.push(`${find(src)} -> ${find(dst)} [label= "${Array.from(edgeMap[src][dst]).join("\n")}"];`)
+      if (rankMap) {
+        if (rankMap[src] >= rankMap[dst]) continue
+      }
+      edges.push(`${find(src)} -> ${find(dst)} [label= "${edgeMap[src][dst].join("\n")}"];`)
     }
   }
-  function shuffle([...array]) {
-    class Random {
-      constructor(seed = 88675123) {
-        this.x = 123456789;
-        this.y = 362436069;
-        this.z = 521288629;
-        this.w = seed;
-      }
-      next(max) {
-        let t = this.x ^ (this.x << 11);
-        this.x = this.y; this.y = this.z; this.z = this.w;
-        t = this.w = (this.w ^ (this.w >>> 19)) ^ (t ^ (t >>> 8));
-        return Math.abs(t) % (max + 1);
-      }
+  let option = "";
+  if (!rankMap) {
+    nodes = shuffle(nodes, 18)
+  } else {
+    nodes.sort((x, y) => rankMap[x] - rankMap[y])
+    let sameRanks = {}
+    for (let src in rankMap) {
+      let rank = rankMap[src]
+      if (!sameRanks[rank]) sameRanks[rank] = []
+      sameRanks[rank].push(nameTable[src])
     }
-    const random = new Random(18)
-    for (let i = array.length - 1; i >= 0; i--) {
-      const j = random.next(i);
-      [array[i], array[j]] = [array[j], array[i]];
+    for (let rank in sameRanks) {
+      option += `\{rank = same; ${sameRanks[rank].join("; ")}; \}\n`
     }
-    return array;
   }
-  nodes = shuffle(nodes)
-  edges = shuffle(edges)
   let text = `
   digraph {
     // ratio=auto;
     // concentrate=true;
     graph[layout=dot];
     node[shape = box, style = rounded];
-    ${nodes.join("\n")}
+    ${nodes.map(x => `${nameTable[x]} [label="${x}"];`).join("\n")}
     ${edges.join("\n")}
+    ${option};
   } `
   return text
 }
-let edgeMap = createEdgeMap(items)
-let dot = edgeMapToDot(edgeMap)
-console.log(dot)
+let edgeMap = createEdgeMap(items, false)
+let rankMap = getRankMap(edgeMap, "(食材)", "(神秘の力)")
+console.log(edgeMapToDot(edgeMap, rankMap))
