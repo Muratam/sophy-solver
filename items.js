@@ -4,14 +4,12 @@
 // - ドンケルシュテルン・邪な核石・竜核・プニの体液・虹プニの体液 は敵を倒せないので得られない
 // - 万能厄除け香 を得るのは封印された寺院に行く必要があるので排除
 // - 夕闇の雫・深紅の石・天界の大掃除・アンブロシアの花冠・ヴェルべディス・エレメントガードも排除
-
 // 意味があるのは17種類
 let categories = [
   '(中和剤)', '(燃料)', '(毒の材料)', '(薬の材料)', '(食材)', '(水)',
   '(神秘の力)', '(火薬)', '(紙)', '(金属)', '(粘土)', '(エリキシル)',
   '(糸素材)', '(木材)', '(布)', '(宝石)', '(魔法の道具)', '(動物素材)',
 ]
-
 let items = [
   // 素材
   { name: "魔法の草", color: "緑", categories: { "(植物類)": 10, "(薬の材料)": 10 } },
@@ -208,11 +206,73 @@ let items = [
   { name: "魔除けの護符", color: "黄", categories: { "(魔法の道具)": 20, "(紙)": 15 }, srcs: ["敬虔な信者用お札", "聖水", "(布)", "(神秘の力)"] },
   { name: "ハートペンダント", color: "白", categories: { "(金属)": 25 }, srcs: ["蒼剛石", "(金属)", "(宝石)"] },
 ]
-let itemsMap = {}
-for (let item of items) {
-  itemsMap[item.name] = item
+function createEdgeMap(items) {
+  let itemsMap = {}
+  for (let item of items) {
+    itemsMap[item.name] = item
+  }
+  function nameMap(name) {
+    // let ingots = ["シュタルメタル", "シルヴァリア", "ルビリウム", "ゴルトアイゼン"]
+    // if (ingots.some(x => x === name)) return ""
+    // if (name === "インゴット") return name + "\n" + ingots.join("\n")
+    return name
+  }
+  // src -> dst -> [names]
+  let edgeMap = {}
+  for (let item of items) {
+    let name = item.name;
+    name = nameMap(name)
+    if (!name) continue
+    // 素材は書かなくても図を見ればわかる
+    if (!item.srcs) continue
+    let outCount = 0
+    let dsts = []
+    for (let cat in item.categories) {
+      if (cat === "(武器素材)") continue
+      if (cat === "(防具素材)") continue
+      if (cat === "(お菓子)") continue
+      if (cat === "(食品)") continue
+      if (cat === "(爆弾)") continue // 深紅の石が作れないため
+      if (cat === "(薬品)") continue // ハニーシロップループしかできないため
+      // 全ての素材は失敗作の灰にできる...がそれは自明なので除外(強制品質 0)
+      // 英雄降ろしが薬品->ハニーシロップループなのでクリアドロップ一意(=魔法の道具)
+      // 火薬は中和剤赤は中和剤として使うしかない
+      if (cat === "(食材)") cat = "(魔法の道具)" // クリアドロップ
+      if (cat === "(火薬)") cat = "(中和剤)" // 中和剤・赤
+      if (cat === "(薬の材料)") cat = "(魔法の道具)" // 万薬のもと -> 小悪魔のいたずら
+      if (cat === "(毒の材料)") cat = "(魔法の道具)" // 万薬のもと -> 小悪魔のいたずら
+      if (cat === "(魔法の道具)") cat = "(動物素材)" // マナフェザー
+      dsts.push(cat)
+      outCount++
+    }
+    // 終点
+    if (outCount === 0) continue
+    let srcs = []
+    for (let src of item.srcs) {
+      if (itemsMap[src] && !itemsMap[src].src) {
+        // 素材なら別に書く必要なし
+        continue
+      }
+      if (src === "(鉱石)") continue // 作れない...
+      if (src === "(植物類)") continue // 作れない...
+      if (src === "(食材)") src = "(魔法の道具)" // クリアドロップ
+      if (src === "(火薬)") src = "(中和剤)" // 中和剤・赤
+      if (src === "(薬の材料)") src = "(魔法の道具)" // 万薬のもと -> 小悪魔のいたずら
+      if (src === "(毒の材料)") src = "(魔法の道具)" // 万薬のもと -> 小悪魔のいたずら
+      if (src === "(魔法の道具)") src = "(動物素材)" // マナフェザー
+      srcs.push(src)
+    }
+    for (let src of srcs) {
+      for (let dst of dsts) {
+        if (!edgeMap[src]) edgeMap[src] = {}
+        if (!edgeMap[src][dst]) edgeMap[src][dst] = new Set()
+        edgeMap[src][dst].add(name)
+      }
+    }
+  }
+  return edgeMap;
 }
-function createItemMap() {
+function edgeMapToDot(edgeMap) {
   let nodes = []
   let nameTable = {}
   let now = 0
@@ -224,60 +284,47 @@ function createItemMap() {
     }
     return nameTable[name]
   }
-  function nameMap(name) {
-    // let ingots = ["シュタルメタル", "シルヴァリア", "ルビリウム", "ゴルトアイゼン"]
-    // if (ingots.some(x => x === name)) return ""
-    // if (name === "インゴット") return name + "\n" + ingots.join("\n")
-    return name
-  }
-  let edges = [] // `LR_0 -> LR_2[label = "SS(B)"]; `
-  for (let item of items) {
-    let name = item.name;
-    name = nameMap(name)
-    if (!name) continue
-    // 素材は書かなくても図を見ればわかる
-    if (!item.srcs) continue
-    let outCount = 0
-    for (let cat in item.categories) {
-      if (cat === "(武器素材)") continue
-      if (cat === "(防具素材)") continue
-      if (cat === "(お菓子)") continue
-      if (cat === "(食品)") continue
-      if (cat === "(爆弾)") continue // 深紅の石が作れないため
-      if (cat === "(薬品)") continue // ハニーシロップループしかできないため
-      // 全ての素材は失敗作の灰にできる...がそれは自明なので除外(強制品質 0)
-      // 英雄降ろしが薬品->ハニーシロップループなのでクリアドロップ一意(=魔法の道具)
-      // 火薬は中和剤赤は中和剤として使うしかない
-      // if (cat === "(食材)") cat = "クリアドロップ"
-      // if (cat === "(火薬)") cat = "中和剤・赤"
-      // if (cat === "(魔法の道具)") cat = "マナフェザー"
-      // if (cat === "(薬の材料)") cat = "万薬のもと"
-      edges.push(`${find(name)} -> ${find(cat)}; `)
-      outCount++
+  let edges = []
+  for (let src in edgeMap) {
+    for (let dst in edgeMap[src]) {
+      edges.push(`${find(src)} -> ${find(dst)} [label= "${Array.from(edgeMap[src][dst]).join("\n")}"];`)
     }
-    // 終点
-    if (outCount === 0) continue
-    for (let src of item.srcs) {
-      if (itemsMap[src] && !itemsMap[src].src) {
-        // 素材なら別に書く必要なし
-        continue
+  }
+  function shuffle([...array]) {
+    class Random {
+      constructor(seed = 88675123) {
+        this.x = 123456789;
+        this.y = 362436069;
+        this.z = 521288629;
+        this.w = seed;
       }
-      if (src === "(鉱石)") continue // 作れない...
-      if (src === "(植物類)") continue // 作れない...
-      // if (src === "(食材)") src = "クリアドロップ"
-      // if (src === "(火薬)") src = "中和剤・赤"
-      // if (src === "(魔法の道具)") src = "マナフェザー"
-      // if (src === "(薬の材料)") src = "万薬のもと"
-      edges.push(`${find(src)} -> ${find(name)}; `)
+      next(max) {
+        let t = this.x ^ (this.x << 11);
+        this.x = this.y; this.y = this.z; this.z = this.w;
+        t = this.w = (this.w ^ (this.w >>> 19)) ^ (t ^ (t >>> 8));
+        return Math.abs(t) % (max + 1);
+      }
     }
+    const random = new Random(18)
+    for (let i = array.length - 1; i >= 0; i--) {
+      const j = random.next(i);
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
   }
-
+  nodes = shuffle(nodes)
+  edges = shuffle(edges)
   let text = `
   digraph {
+    // ratio=auto;
+    // concentrate=true;
+    graph[layout=dot];
     node[shape = box, style = rounded];
     ${nodes.join("\n")}
     ${edges.join("\n")}
   } `
-  console.log(text)
+  return text
 }
-createItemMap()
+let edgeMap = createEdgeMap(items)
+let dot = edgeMapToDot(edgeMap)
+console.log(dot)
